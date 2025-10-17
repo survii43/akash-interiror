@@ -74,7 +74,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
         value: _analyticsData.totalClients.toString(),
         subtitle: 'Active clients',
         icon: Icons.people,
-        color: AppColors.primary,
+        color: AppColors.lightPrimary,
         onTap: () => _showClientDetails(),
       ),
       AnalyticsCardData(
@@ -82,7 +82,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
         value: _analyticsData.totalProjects.toString(),
         subtitle: 'All projects',
         icon: Icons.work,
-        color: AppColors.secondary,
+        color: AppColors.lightSecondary,
         onTap: () => _showProjectDetails(),
       ),
       AnalyticsCardData(
@@ -198,8 +198,8 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
       appBar: ResponsiveComponents.responsiveAppBar(
         context: context,
         title: 'Analytics Dashboard',
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.lightPrimary,
+        foregroundColor: AppColors.lightOnPrimary,
         actions: [
           IconButton(
             icon: ResponsiveComponents.responsiveIcon(context, Icons.refresh),
@@ -213,7 +213,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             ? Center(
                 child: ResponsiveComponents.responsiveProgressIndicator(
                   context,
-                  valueColor: AppColors.primary,
+                  valueColor: AppColors.lightPrimary,
                 ),
               )
             : FadeTransition(
@@ -243,12 +243,12 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
   Widget _buildHeaderSection(BuildContext context) {
     return ResponsiveComponents.responsiveCard(
       context: context,
-      color: AppColors.primary,
+      color: AppColors.lightPrimary,
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.primaryDark],
+            colors: [AppColors.lightPrimary, AppColors.primaryDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

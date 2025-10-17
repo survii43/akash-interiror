@@ -179,7 +179,7 @@ class _AnalyticsCard extends StatelessWidget {
           children: [
             ResponsiveComponents.responsiveProgressIndicator(
               context,
-              valueColor: AppColors.primary,
+              valueColor: AppColors.lightPrimary,
             ),
             SizedBox(height: isMobile ? ResponsiveUtils.responsiveSpacing(context) * 0.5 : ResponsiveUtils.responsiveSpacing(context)),
             ResponsiveComponents.responsiveText(
