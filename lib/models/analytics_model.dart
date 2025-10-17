@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../utils/responsive_utils.dart';
+import '../widgets/responsive_components.dart';
 
 /// Analytics data model for dashboard statistics
 class AnalyticsData {
@@ -19,6 +22,18 @@ class AnalyticsData {
     required this.totalPaid,
     required this.totalBalance,
   });
+
+  factory AnalyticsData.empty() {
+    return const AnalyticsData(
+      totalClients: 0,
+      totalProjects: 0,
+      completedProjects: 0,
+      pendingProjects: 0,
+      ongoingProjects: 0,
+      totalPaid: 0.0,
+      totalBalance: 0.0,
+    );
+  }
 
   /// Calculate completion percentage
   double get completionPercentage {
@@ -45,18 +60,6 @@ class AnalyticsData {
   double get paymentCompletionPercentage {
     if (totalRevenue == 0) return 0.0;
     return (totalPaid / totalRevenue) * 100;
-  }
-
-  factory AnalyticsData.empty() {
-    return const AnalyticsData(
-      totalClients: 0,
-      totalProjects: 0,
-      completedProjects: 0,
-      pendingProjects: 0,
-      ongoingProjects: 0,
-      totalPaid: 0.0,
-      totalBalance: 0.0,
-    );
   }
 
   AnalyticsData copyWith({
@@ -97,4 +100,184 @@ class AnalyticsCardData {
     required this.color,
     this.onTap,
   });
+}
+
+/// Enhanced analytics grid widget with responsive design
+class AnalyticsGrid extends StatelessWidget {
+  final List<AnalyticsCardData> cards;
+  final bool isLoading;
+  final int crossAxisCount;
+  final double childAspectRatio;
+
+  const AnalyticsGrid({
+    super.key,
+    required this.cards,
+    this.isLoading = false,
+    this.crossAxisCount = 2,
+    this.childAspectRatio = 1.2,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = ResponsiveUtils.responsiveSpacing(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
+    if (isLoading) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.all(isMobile ? spacing * 0.5 : spacing),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: isMobile ? 1.0 : childAspectRatio,
+          crossAxisSpacing: isMobile ? spacing * 0.5 : spacing,
+          mainAxisSpacing: isMobile ? spacing * 0.5 : spacing,
+        ),
+        itemCount: cards.length,
+        itemBuilder: (context, index) => _AnalyticsCard(
+          data: cards[index],
+          isLoading: true,
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.all(isMobile ? spacing * 0.5 : spacing),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: isMobile ? 1.0 : childAspectRatio,
+        crossAxisSpacing: isMobile ? spacing * 0.5 : spacing,
+        mainAxisSpacing: isMobile ? spacing * 0.5 : spacing,
+      ),
+      itemCount: cards.length,
+      itemBuilder: (context, index) => _AnalyticsCard(data: cards[index]),
+    );
+  }
+}
+
+/// Enhanced analytics card widget with responsive design
+class _AnalyticsCard extends StatelessWidget {
+  final AnalyticsCardData data;
+  final bool isLoading;
+
+  const _AnalyticsCard({
+    required this.data,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
+    if (isLoading) {
+      return ResponsiveComponents.responsiveCard(
+        context: context,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ResponsiveComponents.responsiveProgressIndicator(
+              context,
+              valueColor: AppColors.primary,
+            ),
+            SizedBox(height: isMobile ? ResponsiveUtils.responsiveSpacing(context) * 0.5 : ResponsiveUtils.responsiveSpacing(context)),
+            ResponsiveComponents.responsiveText(
+              context,
+              'Loading...',
+              style: ResponsiveTextStyle.responsive(
+                context,
+                mobileFontSize: 10.0,
+                tabletFontSize: 12.0,
+                smallDesktopFontSize: 14.0,
+                largeDesktopFontSize: 16.0,
+                color: AppColors.grey500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ResponsiveComponents.responsiveCard(
+      context: context,
+      onTap: data.onTap,
+      child: Padding(
+        padding: EdgeInsets.all(isMobile ? 8.0 : 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                ResponsiveComponents.responsiveIcon(
+                  context,
+                  data.icon,
+                  color: data.color,
+                  size: isMobile ? ResponsiveUtils.responsiveIconSize(context) * 0.7 : ResponsiveUtils.responsiveIconSize(context),
+                ),
+                const Spacer(),
+                if (data.onTap != null)
+                  ResponsiveComponents.responsiveIcon(
+                    context,
+                    Icons.arrow_forward_ios,
+                    color: data.color,
+                    size: isMobile ? ResponsiveUtils.responsiveIconSize(context) * 0.3 : ResponsiveUtils.responsiveIconSize(context) * 0.5,
+                  ),
+              ],
+            ),
+            SizedBox(height: isMobile ? ResponsiveUtils.responsiveSpacing(context) * 0.5 : ResponsiveUtils.responsiveSpacing(context)),
+            ResponsiveComponents.responsiveText(
+              context,
+              data.title,
+              style: ResponsiveTextStyle.responsive(
+                context,
+                mobileFontSize: 10.0,
+                tabletFontSize: 12.0,
+                smallDesktopFontSize: 14.0,
+                largeDesktopFontSize: 16.0,
+                fontWeight: FontWeight.w600,
+                color: AppColors.grey700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: isMobile ? ResponsiveUtils.responsiveSpacing(context) * 0.25 : ResponsiveUtils.responsiveSpacing(context) * 0.5),
+            ResponsiveComponents.responsiveText(
+              context,
+              data.value,
+              style: ResponsiveTextStyle.responsive(
+                context,
+                mobileFontSize: 14.0,
+                tabletFontSize: 16.0,
+                smallDesktopFontSize: 18.0,
+                largeDesktopFontSize: 20.0,
+                fontWeight: FontWeight.bold,
+                color: data.color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (data.subtitle.isNotEmpty) ...[
+              SizedBox(height: isMobile ? ResponsiveUtils.responsiveSpacing(context) * 0.125 : ResponsiveUtils.responsiveSpacing(context) * 0.25),
+              ResponsiveComponents.responsiveText(
+                context,
+                data.subtitle,
+                style: ResponsiveTextStyle.responsive(
+                  context,
+                  mobileFontSize: 8.0,
+                  tabletFontSize: 10.0,
+                  smallDesktopFontSize: 12.0,
+                  largeDesktopFontSize: 14.0,
+                  color: AppColors.grey500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

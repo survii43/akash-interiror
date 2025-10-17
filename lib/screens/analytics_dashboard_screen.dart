@@ -4,7 +4,6 @@ import '../config/app_colors.dart';
 import '../models/analytics_model.dart';
 import '../services/analytics_service.dart';
 import '../services/database_service.dart';
-import '../widgets/analytics_card.dart';
 import '../utils/ui_utils.dart';
 import '../utils/responsive_utils.dart';
 import '../widgets/responsive_components.dart';
@@ -18,16 +17,32 @@ class AnalyticsDashboardScreen extends StatefulWidget {
   State<AnalyticsDashboardScreen> createState() => _AnalyticsDashboardScreenState();
 }
 
-class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
+class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
+    with TickerProviderStateMixin {
   AnalyticsData _analyticsData = AnalyticsData.empty();
   bool _isLoading = true;
   late AnalyticsService _analyticsService;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     _analyticsService = AnalyticsService(context.read<DatabaseService>());
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
     _loadAnalytics();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAnalytics() async {
@@ -41,6 +56,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         _analyticsData = data;
         _isLoading = false;
       });
+      _animationController.forward();
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -62,44 +78,44 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         onTap: () => _showClientDetails(),
       ),
       AnalyticsCardData(
-        title: 'Completed Projects',
+        title: 'Total Projects',
+        value: _analyticsData.totalProjects.toString(),
+        subtitle: 'All projects',
+        icon: Icons.work,
+        color: AppColors.secondary,
+        onTap: () => _showProjectDetails(),
+      ),
+      AnalyticsCardData(
+        title: 'Completed',
         value: _analyticsData.completedProjects.toString(),
-        subtitle: '${_analyticsData.completionPercentage.toStringAsFixed(1)}% completion rate',
+        subtitle: '${_analyticsData.completionPercentage.toStringAsFixed(1)}% completion',
         icon: Icons.check_circle,
         color: AppColors.success,
-        onTap: () => _showProjectDetails('completed'),
+        onTap: () => _showProjectDetails('Completed'),
       ),
       AnalyticsCardData(
-        title: 'Pending Projects',
+        title: 'Pending',
         value: _analyticsData.pendingProjects.toString(),
-        subtitle: '${_analyticsData.pendingPercentage.toStringAsFixed(1)}% of total',
-        icon: Icons.schedule,
+        subtitle: '${_analyticsData.pendingPercentage.toStringAsFixed(1)}% pending',
+        icon: Icons.hourglass_empty,
         color: AppColors.warning,
-        onTap: () => _showProjectDetails('pending'),
+        onTap: () => _showProjectDetails('Pending'),
       ),
       AnalyticsCardData(
-        title: 'Ongoing Projects',
+        title: 'Ongoing',
         value: _analyticsData.ongoingProjects.toString(),
-        subtitle: '${_analyticsData.ongoingPercentage.toStringAsFixed(1)}% of total',
-        icon: Icons.trending_up,
+        subtitle: '${_analyticsData.ongoingPercentage.toStringAsFixed(1)}% ongoing',
+        icon: Icons.play_circle_outline,
         color: AppColors.info,
-        onTap: () => _showProjectDetails('active'),
+        onTap: () => _showProjectDetails('Active'),
       ),
       AnalyticsCardData(
         title: 'Total Paid',
-        value: UIUtils.formatCurrency(_analyticsData.totalPaid),
-        subtitle: '${_analyticsData.paymentCompletionPercentage.toStringAsFixed(1)}% payment rate',
-        icon: Icons.payment,
+        value: '\$${_analyticsData.totalPaid.toStringAsFixed(0)}',
+        subtitle: '${_analyticsData.paymentCompletionPercentage.toStringAsFixed(1)}% of total',
+        icon: Icons.payments,
         color: AppColors.success,
-        onTap: () => _showFinancialDetails(),
-      ),
-      AnalyticsCardData(
-        title: 'Outstanding Balance',
-        value: UIUtils.formatCurrency(_analyticsData.totalBalance),
-        subtitle: 'Pending payments',
-        icon: Icons.account_balance_wallet,
-        color: AppColors.accent,
-        onTap: () => _showFinancialDetails(),
+        onTap: _showFinancialDetails,
       ),
     ];
   }
@@ -113,7 +129,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  void _showProjectDetails(String status) {
+  void _showProjectDetails([String? status]) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -126,25 +142,27 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Financial Summary'),
+        title: ResponsiveComponents.responsiveText(
+          context,
+          'Financial Details',
+          style: ResponsiveTextStyle.responsive(
+            context,
+            mobileFontSize: 18.0,
+            tabletFontSize: 20.0,
+            smallDesktopFontSize: 22.0,
+            largeDesktopFontSize: 24.0,
+            fontWeight: FontWeight.bold,
+            color: AppColors.grey900,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildFinancialRow('Total Revenue', UIUtils.formatCurrency(_analyticsData.totalRevenue)),
-            _buildFinancialRow('Total Paid', UIUtils.formatCurrency(_analyticsData.totalPaid)),
-            _buildFinancialRow('Outstanding Balance', UIUtils.formatCurrency(_analyticsData.totalBalance)),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: _analyticsData.paymentCompletionPercentage / 100,
-              backgroundColor: AppColors.grey200,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.success),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Payment Completion: ${_analyticsData.paymentCompletionPercentage.toStringAsFixed(1)}%',
-              style: const TextStyle(fontSize: 12, color: AppColors.grey600),
-            ),
+            _buildFinancialRow('Total Paid', '\$${_analyticsData.totalPaid.toStringAsFixed(2)}'),
+            _buildFinancialRow('Outstanding', '\$${_analyticsData.totalBalance.toStringAsFixed(2)}'),
+            _buildFinancialRow('Total Revenue', '\$${_analyticsData.totalRevenue.toStringAsFixed(2)}'),
+            _buildFinancialRow('Payment Completion', '${_analyticsData.paymentCompletionPercentage.toStringAsFixed(1)}%'),
           ],
         ),
         actions: [
@@ -176,9 +194,12 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: ResponsiveComponents.responsiveAppBar(
         context: context,
         title: 'Analytics Dashboard',
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
         actions: [
           IconButton(
             icon: ResponsiveComponents.responsiveIcon(context, Icons.refresh),
@@ -188,105 +209,115 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadAnalytics,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Summary Section
-              AnalyticsSummary(
-                data: _analyticsData,
-                isLoading: _isLoading,
-              ),
-              
-              // Analytics Cards Grid
-              Padding(
-                padding: ResponsiveUtils.responsivePadding(context),
-                child: Text(
-                  'Key Metrics',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+        child: _isLoading 
+            ? Center(
+                child: ResponsiveComponents.responsiveProgressIndicator(
+                  context,
+                  valueColor: AppColors.primary,
+                ),
+              )
+            : FadeTransition(
+                opacity: _fadeAnimation,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Enhanced Header Section
+                      _buildHeaderSection(context),
+                      
+                      SizedBox(height: ResponsiveUtils.responsiveSpacing(context) * 2),
+                      
+                      // Analytics Cards Section
+                      _buildAnalyticsSection(context),
+                      
+                      SizedBox(height: ResponsiveUtils.responsiveSpacing(context) * 2),
+                    ],
                   ),
                 ),
               ),
-              SizedBox(height: ResponsiveUtils.responsiveSpacing(context)),
-              
-              AnalyticsGrid(
-                cards: _buildAnalyticsCards(),
-                isLoading: _isLoading,
-                crossAxisCount: ResponsiveUtils.responsiveGridCount(context),
-                childAspectRatio: ResponsiveUtils.isMobile(context) ? 1.2 : 1.1,
-              ),
-              
-              SizedBox(height: ResponsiveUtils.responsiveSpacing(context) * 2),
-              
-              // Quick Actions
-              Padding(
-                padding: ResponsiveUtils.responsivePadding(context),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Quick Actions',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+      ),
+    );
+  }
+
+  Widget _buildHeaderSection(BuildContext context) {
+    return ResponsiveComponents.responsiveCard(
+      context: context,
+      color: AppColors.primary,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryDark],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(ResponsiveUtils.responsiveBorderRadius(context)),
+        ),
+        child: Padding(
+          padding: ResponsiveUtils.responsivePadding(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ResponsiveComponents.responsiveIcon(
+                    context,
+                    Icons.analytics,
+                    color: AppColors.white,
+                  ),
+                  SizedBox(width: ResponsiveUtils.responsiveSpacing(context) * 0.5),
+                  Expanded(
+                    child: ResponsiveComponents.responsiveText(
+                      context,
+                      'Business Overview',
+                      style: ResponsiveTextStyle.responsive(
+                        context,
+                        mobileFontSize: 20.0,
+                        tabletFontSize: 22.0,
+                        smallDesktopFontSize: 24.0,
+                        largeDesktopFontSize: 26.0,
                         fontWeight: FontWeight.bold,
+                        color: AppColors.white,
                       ),
                     ),
-                    SizedBox(height: ResponsiveUtils.responsiveSpacing(context)),
-                    ResponsiveUtils.isMobile(context)
-                        ? Column(
-                            children: [
-                              _buildQuickActionCard(
-                                'View All Clients',
-                                Icons.people,
-                                AppColors.primary,
-                                () => _showClientDetails(),
-                              ),
-                              SizedBox(height: ResponsiveUtils.responsiveSpacing(context)),
-                              _buildQuickActionCard(
-                                'View All Projects',
-                                Icons.work,
-                                AppColors.secondary,
-                                () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ProjectListScreen(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  'View All Clients',
-                                  Icons.people,
-                                  AppColors.primary,
-                                  () => _showClientDetails(),
-                                ),
-                              ),
-                              SizedBox(width: ResponsiveUtils.responsiveSpacing(context)),
-                              Expanded(
-                                child: _buildQuickActionCard(
-                                  'View All Projects',
-                                  Icons.work,
-                                  AppColors.secondary,
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ProjectListScreen(),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                  ],
+                  ),
+                ],
+              ),
+              SizedBox(height: ResponsiveUtils.responsiveSpacing(context)),
+              ResponsiveComponents.responsiveText(
+                context,
+                'Track your business performance and key metrics',
+                style: ResponsiveTextStyle.responsive(
+                  context,
+                  mobileFontSize: 14.0,
+                  tabletFontSize: 16.0,
+                  smallDesktopFontSize: 18.0,
+                  largeDesktopFontSize: 20.0,
+                  color: AppColors.white.withValues(alpha: 0.9),
                 ),
               ),
-              
-              SizedBox(height: ResponsiveUtils.responsiveSpacing(context) * 2),
+              SizedBox(height: ResponsiveUtils.responsiveSpacing(context) * 1.5),
+              // Quick stats in header
+              ResponsiveUtils.isMobile(context)
+                  ? Column(
+                      children: [
+                        _buildHeaderStat('Clients', _analyticsData.totalClients.toString(), Icons.people),
+                        SizedBox(height: ResponsiveUtils.responsiveSpacing(context) * 0.5),
+                        _buildHeaderStat('Projects', _analyticsData.totalProjects.toString(), Icons.work),
+                        SizedBox(height: ResponsiveUtils.responsiveSpacing(context) * 0.5),
+                        _buildHeaderStat('Revenue', '\$${_analyticsData.totalRevenue.toStringAsFixed(0)}', Icons.attach_money),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: _buildHeaderStat('Clients', _analyticsData.totalClients.toString(), Icons.people)),
+                        SizedBox(width: ResponsiveUtils.responsiveSpacing(context)),
+                        Expanded(child: _buildHeaderStat('Projects', _analyticsData.totalProjects.toString(), Icons.work)),
+                        SizedBox(width: ResponsiveUtils.responsiveSpacing(context)),
+                        Expanded(child: _buildHeaderStat('Revenue', '\$${_analyticsData.totalRevenue.toStringAsFixed(0)}', Icons.attach_money)),
+                      ],
+                    ),
             ],
           ),
         ),
@@ -294,35 +325,84 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  Widget _buildQuickActionCard(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+  Widget _buildAnalyticsSection(BuildContext context) {
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
+    return Padding(
+      padding: EdgeInsets.all(isMobile ? ResponsiveUtils.responsiveSpacing(context) * 0.5 : ResponsiveUtils.responsiveSpacing(context)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ResponsiveComponents.responsiveText(
+            context,
+            'Key Metrics',
+            style: ResponsiveTextStyle.responsive(
+              context,
+              mobileFontSize: 16.0,
+              tabletFontSize: 18.0,
+              smallDesktopFontSize: 20.0,
+              largeDesktopFontSize: 22.0,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey900,
+            ),
+          ),
+          SizedBox(height: isMobile ? ResponsiveUtils.responsiveSpacing(context) * 0.5 : ResponsiveUtils.responsiveSpacing(context)),
+          AnalyticsGrid(
+            cards: _buildAnalyticsCards(),
+            isLoading: _isLoading,
+            crossAxisCount: ResponsiveUtils.responsiveGridCount(context),
+            childAspectRatio: isMobile ? 1.0 : 1.1,
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildHeaderStat(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        ResponsiveComponents.responsiveIcon(
+          context,
+          icon,
+          color: AppColors.white,
+          size: ResponsiveUtils.responsiveIconSize(context) * 0.8,
+        ),
+        SizedBox(width: ResponsiveUtils.responsiveSpacing(context) * 0.5),
+        Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 32),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              ResponsiveComponents.responsiveText(
+                context,
+                label,
+                style: ResponsiveTextStyle.responsive(
+                  context,
+                  mobileFontSize: 12.0,
+                  tabletFontSize: 14.0,
+                  smallDesktopFontSize: 16.0,
+                  largeDesktopFontSize: 18.0,
+                  color: AppColors.white.withValues(alpha: 0.8),
                 ),
-                textAlign: TextAlign.center,
+              ),
+              ResponsiveComponents.responsiveText(
+                context,
+                value,
+                style: ResponsiveTextStyle.responsive(
+                  context,
+                  mobileFontSize: 16.0,
+                  tabletFontSize: 18.0,
+                  smallDesktopFontSize: 20.0,
+                  largeDesktopFontSize: 22.0,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.white,
+                ),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
+
 }

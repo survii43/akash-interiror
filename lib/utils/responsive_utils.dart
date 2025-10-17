@@ -102,7 +102,7 @@ class ResponsiveUtils {
   static int responsiveGridCount(BuildContext context) {
     return responsive(
       context,
-      mobile: 1,
+      mobile: 2,
       tablet: 2,
       smallDesktop: 3,
       largeDesktop: 4,
